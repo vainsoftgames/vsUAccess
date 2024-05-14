@@ -11,7 +11,7 @@ class vsUAccess {
         $this->token = $token;
     }
 
-    private function callAPI($method, $url, $data = false) {
+    private function callAPI($method, $url='', $data = false) {
         $curl = curl_init();
 
         switch ($method) {
@@ -58,6 +58,10 @@ class vsUAccess {
 
         return json_decode($result, true);
     }
+    
+    public function ping(){
+    	return $this->callAPI('GET');
+    }
 
     public function createUser($firstName, $lastName, $employeeNumber, $onboardTime, $userEmail) {
         $data = [
@@ -86,10 +90,10 @@ class vsUAccess {
     	if($pageNum > 1) $data['page_num'] = $pageNum;
     	if($pageSize > 0) $data['page_size'] = $pageSize;
     	if($showPolicy) $data['expand'] = ['access_policy'];
-    	
+
     	return $this->callAPI('GET', '/api/v1/developer/users', $data);
     }
-    
+
     public function getUser($userID){
     	return $this->callAPI('GET', '/api/v1/developer/users/'. $userID);
     }
@@ -100,13 +104,20 @@ class vsUAccess {
 
     	return $this->callAPI('POST', '/api/v1/developer/system/logs', $data);
     }
+
+	public function user_addPIN($uID, $pin){
+		$para = [];
+		$para['pin_code'] = (string)$pin;
+
+		return $this->callAPI('PUT', '/api/v1/developer/users/'. $uID .'/pin_codes', $para);
+	}
     
     
     // Doors
     public function door_list(){
-    	$data = [];
+    	$para = [];
     	
-    	return $this->callAPI('GET', '/api/v1/developer/doors', $data);
+    	return $this->callAPI('GET', '/api/v1/developer/doors', $para);
     }
     public function door_unlock($doorID){
     	return $this->callAPI('PUT', '/api/v1/developer/doors/'. $doorID .'/unlock');
@@ -114,12 +125,31 @@ class vsUAccess {
     public function door_lock($doorID){
     	return $this->callAPI('PUT', '/api/v1/developer/doors/'. $doorID .'/lock');
     }
-
-	public function user_addPIN($uID, $pin){
-		$data = [];
-		$data['pin_code'] = (string)$pin;
-
-		return $this->callAPI('PUT', '/api/v1/developer/users/'. $uID .'/pin_codes', $data);
-	}
+    
+    
+    // Visitors
+    public function getVisitors($id=false, $keyword=false){
+    	return $this->callAPI('GET', '/api/v1/developer/visitors'. ($id ? ('/'. $id) : ($keyword ? ('?keyword='. $keyword) : '')));
+    }
+    public function addVisitor($firstName='', $lastName='', $reason='', $startTime=0, $endTime=0){
+    	$para = [];
+    	$para['first_name'] = $firstName;
+    	$para['last_name'] = $lastName;
+    	$para['visit_reason'] = (in_array($reason, ['Interview','Business','Cooperation','Others']) ? $reason : 'Others');
+    	$para['start_time'] = (is_numeric($startTime) ? $startTime : strtotime($startTime));
+    	$para['end_time'] = (is_numeric($endTime) ? $endTime : strtotime($endTime));
+    	
+    	
+    	return $this->callAPI('POST', '/api/v1/developer/visitors', $para);
+    }
+    public function updateVisitorBulk($id, $para){
+    	return $this->callAPI('PUT', '/api/v1/developer/visitors/'. $id, $para);
+    }
+    public function updateVisitor($id, $field, $value){
+    	$para = [];
+    	$para[$field] = $value;
+    	
+    	return $this->updateVisitorBulk($id, $para);
+    }
 }
 ?>
